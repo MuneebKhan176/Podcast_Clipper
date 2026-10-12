@@ -1,0 +1,95 @@
+'use strict';
+
+require('dotenv').config({ quiet: true });
+
+function required(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}
+
+function toInt(name, fallback) {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') return fallback;
+  const value = Number.parseInt(raw, 10);
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`Environment variable ${name} must be a non-negative integer`);
+  }
+  return value;
+}
+
+function toBool(name, fallback) {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') return fallback;
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  throw new Error(`Environment variable ${name} must be "true" or "false"`);
+}
+
+const nodeEnv = process.env.NODE_ENV || 'development';
+const isProduction = nodeEnv === 'production';
+
+const jwtSecret = required('JWT_SECRET');
+const codeHmacSecret = required('CODE_HMAC_SECRET');
+if (jwtSecret.length < 32) throw new Error('JWT_SECRET must be at least 32 characters');
+if (codeHmacSecret.length < 32) throw new Error('CODE_HMAC_SECRET must be at least 32 characters');
+if (jwtSecret === codeHmacSecret) {
+  throw new Error('JWT_SECRET and CODE_HMAC_SECRET must be different values');
+}
+
+const emailMode = process.env.EMAIL_MODE || 'smtp'; // 'smtp' | 'test' (test discards mail)
+if (!['smtp', 'test'].includes(emailMode)) throw new Error('EMAIL_MODE must be "smtp" or "test"');
+if (emailMode === 'test' && isProduction) throw new Error('EMAIL_MODE=test is not allowed in production');
+
+const cookieSecure = toBool('COOKIE_SECURE', isProduction);
+const cookieSameSite = (process.env.COOKIE_SAMESITE || 'lax').toLowerCase();
+if (!['lax', 'strict', 'none'].includes(cookieSameSite)) {
+  throw new Error('COOKIE_SAMESITE must be lax, strict or none');
+}
+if (isProduction && !cookieSecure) throw new Error('COOKIE_SECURE must be true in production');
+if (cookieSameSite === 'none' && !cookieSecure) {
+  throw new Error('COOKIE_SAMESITE=none requires COOKIE_SECURE=true');
+}
+
+// One value drives both the JWT lifetime and the cookie lifetime so they cannot drift apart.
+const sessionSeconds = toInt('SESSION_HOURS', 24) * 3600;
+const rateWindowMs = toInt('RATE_LIMIT_WINDOW_MINUTES', 15) * 60 * 1000;
+
+module.exports = Object.freeze({
+  nodeEnv,
+  isProduction,
+  port: toInt('PORT', 3000),
+  trustProxy: toInt('TRUST_PROXY', 0), // number of reverse-proxy hops in front of the app
+  appName: process.env.APP_NAME || 'Podcast Clipper',
+  frontendOrigin: required('FRONTEND_ORIGIN').replace(/\/+$/, ''),
+  db: {
+    url: required('DATABASE_URL'),
+    ssl: toBool('DATABASE_SSL', false),
+    poolMax: toInt('DB_POOL_MAX', 10),
+  },
+  jwtSecret,
+  codeHmacSecret,
+  session: { seconds: sessionSeconds, ms: sessionSeconds * 1000 },
+  cookie: {
+    secure: cookieSecure,
+    sameSite: cookieSameSite,
+    domain: process.env.COOKIE_DOMAIN || undefined,
+  },
+  bcryptRounds: toInt('BCRYPT_ROUNDS', 12),
+  verification: {
+    expirySeconds: toInt('VERIFICATION_EXPIRY_SECONDS', 600), // 10 minutes
+    maxAttempts: toInt('VERIFICATION_MAX_ATTEMPTS', 5),
+    resendCooldownSeconds: toInt('RESEND_COOLDOWN_SECONDS', 60),
+  },
+  email: {
+    mode: emailMode,
+    user: emailMode === 'smtp' ? required('EMAIL_USER') : undefined,
+    pass: emailMode === 'smtp' ? required('EMAIL_PASS') : undefined,
+  },
+  rateLimit: {
+    windowMs: rateWindowMs,
+    registerMax: toInt('RATE_LIMIT_REGISTER_MAX', 5),
+    verifyMax: toInt('RATE_LIMIT_VERIFY_MAX', 10),
+    loginMax: toInt('RATE_LIMIT_LOGIN_MAX', 10),
+  },
+});
