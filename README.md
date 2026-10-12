@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Podcast Clipper — Backend (Phase 2: Authentication)
 
 Node.js + Express + PostgreSQL. Cookie-based JWT auth (HttpOnly `token` cookie), email verification with a
@@ -108,3 +109,7 @@ src/app.js (Express wiring)   src/server.js (listen, cleanup timer, graceful shu
 - Email rule is the cordEX one (`.com` addresses only) by request; change `EMAIL_REGEX` in `src/validators/authValidators.js`.
 - Username is not unique (the reference didn't require it). Password rule is length-only (8..72 bytes).
 - Not yet run: tests against your Gmail account and a real browser. The React app comes in Phase 3.
+=======
+# Podcast_Clipper
+An AI  Podcast Clipper, that takes the entire Podcast as one file, transcript it, uses LLMs to score Clips and then combine those lclips  to generate a High Quality Podcast Trailer.
+>>>>>>> 3a1dcf55a977d35606728d054941e22f2b795434
