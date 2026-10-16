@@ -4,7 +4,7 @@ const { describe, it, before, beforeEach, after, mock } = require('node:test');
 const assert = require('node:assert/strict');
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
-const { bootstrap } = require('../helpers');
+const { bootstrap } = require('./helpers/helpers');
 
 const { app, pool, emailService, runMigrations, origin } = bootstrap();
 
@@ -41,7 +41,7 @@ before(async () => {
 });
 beforeEach(async () => {
   sent.length = 0;
-  await pool.query('TRUNCATE users, pending_users');
+  await pool.query('TRUNCATE users, pending_users CASCADE');
 });
 after(async () => {
   mock.restoreAll();
@@ -210,12 +210,12 @@ describe('POST /api/auth/verify-email', () => {
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM pending_users')).rows[0].n, 0);
   });
 
-  it('creates no wallets, accounts, or other tables (auth tables only)', async () => {
+  it('creates no wallets, accounts, or other tables (auth tables, plus uploads)', async () => {
     await verifiedAgent();
     const { rows } = await pool.query(
       "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY 1"
     );
-    assert.deepEqual(rows.map((r) => r.table_name), ['pending_users', 'schema_migrations', 'users']);
+    assert.deepEqual(rows.map((r) => r.table_name), ['pending_users', 'schema_migrations', 'uploads', 'users']);
   });
 
   it('cannot be replayed: a second verify with the same code fails', async () => {
@@ -325,7 +325,7 @@ describe('GET /api/auth/me and the authentication middleware', () => {
 
   it('returns 401 for a valid token whose user no longer exists', async () => {
     const { agent } = await verifiedAgent();
-    await pool.query('TRUNCATE users');
+    await pool.query('TRUNCATE users CASCADE');
     await agent.get('/api/auth/me').expect(401);
   });
 });

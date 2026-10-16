@@ -3,7 +3,7 @@
 const { describe, it, before, beforeEach, after, mock } = require('node:test');
 const assert = require('node:assert/strict');
 const request = require('supertest');
-const { bootstrap } = require('../helpers');
+const { bootstrap } = require('./helpers/helpers');
 
 // Real (low) limits and a real resend cooldown for this file only.
 const { app, pool, emailService, runMigrations, origin } = bootstrap({
@@ -24,7 +24,7 @@ const reg = (email) =>
 
 before(async () => {
   await runMigrations();
-  await pool.query('TRUNCATE users, pending_users');
+  await pool.query('TRUNCATE users, pending_users CASCADE');
   mock.method(emailService, 'sendVerificationEmail', async () => {});
 });
 after(async () => {

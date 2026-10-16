@@ -1,0 +1,29 @@
+.uploader { display: grid; gap: 0.9rem; }
+.uploader-drop {
+  display: grid; place-items: center; gap: 0.35rem; text-align: center;
+  padding: 1.75rem 1rem;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  cursor: pointer;
+}
+.uploader-drop:hover, .uploader-drop.dragging { border-color: var(--primary); color: var(--text); }
+.uploader-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.uploader-drop:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
+.uploader-file { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.uploader-file strong { overflow-wrap: anywhere; }
+.uploader-meta { color: var(--muted); font-size: 0.9rem; }
+.progress {
+  height: 10px; border-radius: 999px; background: var(--border); overflow: hidden;
+}
+.progress > span { display: block; height: 100%; background: var(--primary); transition: width 0.2s ease; }
+.progress.done > span { background: #12b76a; }
+.uploader-status { font-size: 0.92rem; }
+.uploader-notice { color: var(--muted); font-size: 0.88rem; }
+.uploader-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.uploader-actions .btn-primary, .uploader-actions .btn-secondary { width: auto; }
+.upload-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+.upload-list li { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 0.6rem 0; border-top: 1px solid var(--border); }
+.upload-list li:first-child { border-top: 0; }
+.badge { font-size: 0.78rem; padding: 0.1rem 0.5rem; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+.badge.ok { color: #12b76a; border-color: #12b76a; }

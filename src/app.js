@@ -5,6 +5,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const config = require('./config/env');
 const authRoutes = require('./routes/authRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 const { requestGuard } = require('./middleware/requestGuard');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
@@ -28,6 +29,7 @@ app.use(cookieParser());
 
 app.get('/api/health', (req, res) => res.json({ success: true, message: 'OK', data: null }));
 app.use('/api/auth', authRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
