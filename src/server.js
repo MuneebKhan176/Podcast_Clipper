@@ -4,18 +4,25 @@ const app = require('./app');
 const config = require('./config/env');
 const { pool } = require('./config/db');
 const pendingUserRepository = require('./repositories/pendingUserRepository');
+const uploadService = require('./services/uploadService');
 
 const server = app.listen(config.port, () => {
   console.log(`API listening on port ${config.port} (${config.nodeEnv})`);
 });
 
-// Housekeeping: drop expired pending registrations every 15 minutes.
+// Housekeeping every 15 minutes: drop expired pending registrations and abandoned upload sessions.
 const cleanupTimer = setInterval(async () => {
   try {
     const removed = await pendingUserRepository.deleteExpired();
     if (removed > 0) console.log(`Removed ${removed} expired pending registration(s)`);
   } catch (err) {
     console.error('Pending-user cleanup failed:', err.message);
+  }
+  try {
+    const expired = await uploadService.expireStaleUploads();
+    if (expired > 0) console.log(`Expired ${expired} abandoned upload session(s)`);
+  } catch (err) {
+    console.error('Upload cleanup failed:', err.message);
   }
 }, 15 * 60 * 1000);
 cleanupTimer.unref();

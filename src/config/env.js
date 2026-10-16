@@ -51,6 +51,18 @@ if (cookieSameSite === 'none' && !cookieSecure) {
   throw new Error('COOKIE_SAMESITE=none requires COOKIE_SECURE=true');
 }
 
+// ---- Cloud storage (Cloudflare R2, S3-compatible API) ----
+// TOKEN_VALUE (a Cloudflare API token) is NOT needed: uploads use the S3 API with ACCESS_KEY_ID / SECRET_ACCESS_KEY.
+const MiB = 1024 * 1024;
+const cloudAccountId = required('CLOUD_ACCOUNT_ID');
+const partSizeBytes =
+  nodeEnv === 'test' && process.env.UPLOAD_PART_SIZE_BYTES
+    ? toInt('UPLOAD_PART_SIZE_BYTES', 16 * MiB) // tiny parts are only allowed in tests
+    : toInt('UPLOAD_PART_SIZE_MB', 16) * MiB;
+if (partSizeBytes < 5 * MiB && nodeEnv !== 'test') {
+  throw new Error('UPLOAD_PART_SIZE_MB must be at least 5 (storage services reject smaller parts)');
+}
+
 // One value drives both the JWT lifetime and the cookie lifetime so they cannot drift apart.
 const sessionSeconds = toInt('SESSION_HOURS', 24) * 3600;
 const rateWindowMs = toInt('RATE_LIMIT_WINDOW_MINUTES', 15) * 60 * 1000;
@@ -86,8 +98,26 @@ module.exports = Object.freeze({
     user: emailMode === 'smtp' ? required('EMAIL_USER') : undefined,
     pass: emailMode === 'smtp' ? required('EMAIL_PASS') : undefined,
   },
+  storage: {
+    accountId: cloudAccountId,
+    bucket: required('BUCKET_NAME'),
+    publicUri: required('CLOUD_PUBLIC_URI').replace(/\/+$/, ''),
+    accessKeyId: required('ACCESS_KEY_ID'),
+    secretAccessKey: required('SECRET_ACCESS_KEY'),
+    // CLOUD_ENDPOINT is optional (local MinIO, tests). Default is the R2 S3 endpoint for your account.
+    endpoint: process.env.CLOUD_ENDPOINT || `https://${cloudAccountId}.r2.cloudflarestorage.com`,
+  },
+  upload: {
+    partSizeBytes,
+    maxBytes: toInt('UPLOAD_MAX_BYTES', 10 * 1024 * MiB), // 10 GiB
+    maxActivePerUser: toInt('UPLOAD_MAX_ACTIVE_PER_USER', 3),
+    urlTtlSeconds: toInt('UPLOAD_URL_TTL_SECONDS', 900),
+    sessionTtlSeconds: toInt('UPLOAD_SESSION_TTL_HOURS', 48) * 3600,
+    completeStaleSeconds: toInt('UPLOAD_COMPLETE_STALE_SECONDS', 120),
+  },
   rateLimit: {
     windowMs: rateWindowMs,
+    uploadMax: toInt('RATE_LIMIT_UPLOAD_MAX', 2000),
     registerMax: toInt('RATE_LIMIT_REGISTER_MAX', 5),
     verifyMax: toInt('RATE_LIMIT_VERIFY_MAX', 10),
     loginMax: toInt('RATE_LIMIT_LOGIN_MAX', 10),

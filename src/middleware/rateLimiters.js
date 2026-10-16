@@ -15,7 +15,7 @@ function createLimiter({ windowMs, max, message, skipSuccessfulRequests = false 
   });
 }
 
-const { windowMs, registerMax, verifyMax, loginMax } = config.rateLimit;
+const { windowMs, registerMax, verifyMax, loginMax, uploadMax } = config.rateLimit;
 
 const registerLimiter = createLimiter({
   windowMs,
@@ -37,4 +37,11 @@ const loginLimiter = createLimiter({
   skipSuccessfulRequests: true,
 });
 
-module.exports = { createLimiter, registerLimiter, verifyEmailLimiter, loginLimiter };
+// Generous: a 5 GB file means hundreds of small signing/status calls. This only stops runaway clients.
+const uploadLimiter = createLimiter({
+  windowMs,
+  max: uploadMax,
+  message: 'Too many upload requests. Please slow down and try again shortly.',
+});
+
+module.exports = { createLimiter, registerLimiter, verifyEmailLimiter, loginLimiter, uploadLimiter };
